@@ -1,0 +1,635 @@
+{
+  "name": "automation_testing_Client_Onboarding_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client/onboarding",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        640
+      ],
+      "id": "d201f9ef-30c6-4024-a6c9-82ec65549fe6",
+      "name": "Webhook",
+      "webhookId": "c17935e6-e489-430c-9ced-baee940949fe"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\"provisional_action\", \"reason\", \"callTools\"],\n  \"properties\": {\n    \"provisional_action\": {\n      \"type\": \"string\",\n      \"enum\": [\"approve\", \"manual_review_senior\", \"manual_review_board\", \"reject\"]\n    },\n    \"reason\": { \"type\": \"string\" },\n    \"callTools\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\", \"enum\": [\"kyc\", \"credit_score\"] }\n    }\n  },\n  \"additionalProperties\": false\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        128
+      ],
+      "id": "02030cf9-b786-4aed-9053-b88dbb35109c",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -448,
+        128
+      ],
+      "id": "a4ea5b5d-0c1d-4fc2-aa69-bcc796295985",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "025jzx8oXIjxZbo6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "769bf77d-4a1e-45f4-8278-ebfe153c102a",
+              "leftValue": "={{ Array.isArray($json.output.callTools) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "738b43b1-9fb7-4956-b9dc-4be2c3116c18",
+              "leftValue": "={{ ($json.output.callTools || []).includes('kyc') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "e6bba16e-1769-4b19-9618-085bfec1c264",
+      "name": "If_statement_KYC"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b123f32f-5151-4102-9271-4d9ce11c2fb6",
+              "name": "kyc",
+              "value": "{ \"passed\": true, \"issues\": [] }",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        -560
+      ],
+      "id": "ddfc7da2-bf86-4608-9587-ee747879edd3",
+      "name": "KYC_simulation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f53443b7-14bf-4bcf-8fef-4626c45ddc61",
+              "leftValue": "={{ ($json.output.callTools || []).includes('credit_score') }}\n",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        560
+      ],
+      "id": "26d627b5-1f54-4aea-9c3d-d351bc430e16",
+      "name": "If_statement_credit_score"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b23d4232-af72-4aea-a888-0217d445d174",
+              "name": "credit_score_check",
+              "value": "{ \"creditScore\": 600 }",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        416
+      ],
+      "id": "a0c8bbc9-c2f4-40e4-9df4-5949b518ff39",
+      "name": "simulation_Credit_score"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an automated Client Onboarding Planner for a FinTech company.\n\nInputs you will receive:\n- client fields: client_id, full_name, email, account_number, nationality, status, free_text.\n- system variables:\n  - ALLOWED_NATIONALITIES (array) = {{$json.ALLOWED_NATIONALITIES}}\n  - CREDIT_MIN = {{$json.CREDIT_MIN}}\n  - BOARD_MARGIN_POINTS = {{$json.BOARD_MARGIN_POINTS}}\n\nTools available: [\"kyc\", \"credit_score\"].\n- \"kyc\" returns { \"passed\": boolean, \"issues\": [] }.\n- \"credit_score\" returns { \"creditScore\": number }.\n\nBusiness rules (apply strictly; case-insensitive checks):\n1) Nationality gate:\n   - If nationality NOT in ALLOWED_NATIONALITIES AND status == \"student\" → provisional_action = \"manual_review_board\".\n   - If nationality NOT in ALLOWED_NATIONALITIES and status != \"student\" → provisional_action = \"reject\".\n2) If status == \"student\" AND final credit score is within BOARD_MARGIN_POINTS below CREDIT_MIN → provisional_action = \"manual_review_board\".\n3) If nationality is allowed BUT (KYC fails OR credit score < CREDIT_MIN and not within board margin) → provisional_action = \"manual_review_senior\".\n4) Approve only if: nationality allowed, KYC passed, credit score ≥ CREDIT_MIN, and no major issues.\n5) If critical identity fields are missing (full_name, email, account_number, nationality), prefer \"manual_review_senior\" (or \"reject\" if severely incomplete/suspicious).\nBusiness rules (apply strictly; case-insensitive checks):\n1) Nationality gate:\n   - If nationality NOT in ALLOWED_NATIONALITIES AND status == \"student\" → provisional_action = \"manual_review_board\".\n   - If nationality NOT in ALLOWED_NATIONALITIES and status != \"student\" → provisional_action = \"reject\".\n2) If status == \"student\" AND final credit score is within BOARD_MARGIN_POINTS below CREDIT_MIN → provisional_action = \"manual_review_board\".\n3) If nationality is allowed BUT (KYC fails OR credit score < CREDIT_MIN and not within board margin) → provisional_action = \"manual_review_senior\".\n4) Approve only if: nationality allowed, KYC passed, credit score ≥ CREDIT_MIN, and no major issues.\n5) If critical identity fields are missing (full_name, email, account_number, nationality), prefer \"manual_review_senior\" (or \"reject\" if severely incomplete/suspicious).\n\n\nYour job in this first step:\n- Analyze ONLY the input now.\n- Decide which tools to call next: [\"kyc\"], [\"credit_score\"], [\"kyc\",\"credit_score\"], or [].\n- Propose a provisional action per rules (final decision may change after tool results).\n\nReturn ONLY this JSON (no extra text):\n{\n  \"provisional_action\": \"approve | manual_review_senior | manual_review_board | reject\",\n  \"reason\": \"\",\n  \"callTools\": []\n}\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -272,
+        -112
+      ],
+      "id": "88a4040c-3967-4b2d-bf90-2dcfa0d79340",
+      "name": "AI Agent Planner"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "529d30a2-55d7-4a66-9fe2-8ca44eb4b794",
+              "name": "kyc",
+              "value": "{   \"passed\": null,   \"issues\": [],   \"skipped\": true }",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        -384
+      ],
+      "id": "e3cac47e-2644-444a-b4a2-76123318be1d",
+      "name": "KYC_Fallback"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0f99c499-3ab9-4e69-bf98-25bf9047479d",
+              "name": "credit_score",
+              "value": "{   \"creditScore\": null,   \"skipped\": true }",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        576
+      ],
+      "id": "dfd80457-bd98-46d6-a4bc-aa97bd8356ad",
+      "name": "Credit_Score_Fallback"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the FINAL Client Onboarding Compliance Agent for a FinTech company.\nYou receive a context object containing:\n- applicant: client_id, full_name, email, account_number, nationality, status, free_text\n- checks: kyc {passed, issues}, credit_score_check {creditScore}\n- planner_output: { provisional_action, reason, callTools }\n\nContext (JSON):\n{{ JSON.stringify($json.context) }}\n\nBusiness rules (apply strictly, case-insensitive where relevant):\n1) Nationality gate:\n   - If nationality is NOT in the allowed list AND status == \"student\" → final_action = \"manual_review_board\".\n   - If nationality is NOT in the allowed list AND status != \"student\" → final_action = \"reject\".\n2) If status == \"student\" AND final credit score is within BOARD_MARGIN_POINTS below CREDIT_MIN → \"manual_review_board\".\n3) If nationality is allowed BUT (KYC fails OR credit score < CREDIT_MIN and not within board margin) → \"manual_review_senior\".\n4) Approve only if: nationality allowed, KYC passed, credit score ≥ CREDIT_MIN, and no major issues.\n5) If critical identity fields are missing (full_name, email, account_number, nationality), prefer \"manual_review_senior\" (or \"reject\" if severely incomplete/suspicious).\n\nPolicies (constants for this decision):\n- ALLOWED_NATIONALITIES: {{ JSON.stringify($item(0).$node[\"System Variable - Policies\"].json.ALLOWED_NATIONALITIES) }}\n- CREDIT_MIN: {{ $item(0).$node[\"System Variable - Policies\"].json.CREDIT_MIN }}\n- BOARD_MARGIN_POINTS: {{ $item(0).$node[\"System Variable - Policies\"].json.BOARD_MARGIN_POINTS }}\n\nYour task:\n- Use ONLY the JSON in Context to decide.\n- Do NOT ask for more input.\n- Return ONLY the JSON below (no prose):\n\n{\n  \"output\": {\n    \"client_id\": \"{{ $json.context.applicant.client_id }}\",\n    \"final_action\": \"approve | manual_review_senior | manual_review_board | reject\",\n    \"reason\": \"clear, short justification referencing the rules used\",\n    \"risk_level\": \"low | medium | high\",\n    \"tools_used\": [\"kyc\", \"credit_score\"]\n  }\n}\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1408,
+        -112
+      ],
+      "id": "4b548ff7-8d6b-4c65-a229-625c1cb6956f",
+      "name": "AI Agent final decision"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1312,
+        224
+      ],
+      "id": "40b7019b-5d52-46ad-85ab-d68338b2fca7",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "025jzx8oXIjxZbo6",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "91569873-3680-48ba-8b92-0120f7d6078f",
+              "name": "client_id",
+              "value": "={{$node[\"Webhook\"].json.client_id}}",
+              "type": "string"
+            },
+            {
+              "id": "bcecc425-55c9-4d3d-bbb0-33f8081dbed6",
+              "name": "full_name",
+              "value": "={{$node[\"Webhook\"].json.full_name}}",
+              "type": "string"
+            },
+            {
+              "id": "147afbfe-a169-4208-9a67-c1e9a08c5bef",
+              "name": "account_number",
+              "value": "={{$node[\"Webhook\"].json.account_number}}",
+              "type": "string"
+            },
+            {
+              "id": "2eb346fc-fed3-4322-9b01-7bc6aa3d63fc",
+              "name": "nationality",
+              "value": "={{$node[\"Webhook\"].json.nationality}}",
+              "type": "string"
+            },
+            {
+              "id": "7f8bd9aa-d1b5-46ae-9db9-a93dd2b223fd",
+              "name": "status",
+              "value": "={{$node[\"Webhook\"].json.status}}",
+              "type": "string"
+            },
+            {
+              "id": "27d6f6ff-c1a8-4c36-921f-0ff8532899d6",
+              "name": "free_text",
+              "value": "={{$node[\"Webhook\"].json.free_text}}",
+              "type": "string"
+            },
+            {
+              "id": "d2d9b374-ea79-43e0-80a1-3a6c1ac6ef52",
+              "name": "context",
+              "value": "={{   {     applicant: {       client_id: $json.client_id ?? null,       full_name: $json.full_name ?? null,       email: $json.email ?? null,       account_number: $json.account_number ?? null,       nationality: $json.nationality ?? null,       status: $json.status ?? null,       free_text: $json.free_text ?? null     },     checks: {       kyc: $json.kyc ?? {},       credit_score_check: $json.credit_score_check ?? {}     },     planner_output: $json.output ?? {}   } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -112
+      ],
+      "id": "4c2ab9c4-64a6-4738-a293-d2c795e7605c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "34f2748f-6f04-4040-9009-b2c7e7e507e2",
+              "name": "ALLOWED_NATIONALITIES",
+              "value": "[\"India\",\"Singapore\",\"Malaysia\"]",
+              "type": "array"
+            },
+            {
+              "id": "7d88d663-a6cd-47ea-9e8f-2dab34ab88cc",
+              "name": "CREDIT_MIN",
+              "value": 500,
+              "type": "number"
+            },
+            {
+              "id": "27f30512-9695-4e06-bad2-c40c453ff08b",
+              "name": "BOARD_MARGIN_POINTS",
+              "value": 3,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -480,
+        -112
+      ],
+      "id": "70881a4b-3244-4603-b933-4a1b30ec13f1",
+      "name": "System Variable - Policies"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"client_id\": { \"type\": \"string\" },\n    \"final_action\": { \"type\": \"string\", \"enum\": [\"approve\",\"reject\",\"manual_review_senior\",\"manual_review_board\"] },\n    \"reason\": { \"type\": \"string\" },\n    \"risk_level\": { \"type\": \"string\", \"enum\": [\"low\",\"medium\",\"high\"] },\n    \"tools_used\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }\n  },\n  \"required\": [\"client_id\",\"final_action\",\"reason\",\"risk_level\",\"tools_used\"]\n}\n\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1648,
+        256
+      ],
+      "id": "33dfeeff-2a1f-43fa-919e-5dfe842f4bec",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "4ebeec17-531a-4ba2-9261-a0f3a1624a7a",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "client_id": "01-000",
+          "full_name": "Isaac Jacob",
+          "email": "fakemail@gmail.com",
+          "account_number": "A00000",
+          "nationality": "Belguim",
+          "free_text": "international contractor",
+          "status": "traveller"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "System Variable - Policies",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent Planner",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If_statement_KYC": {
+      "main": [
+        [
+          {
+            "node": "KYC_simulation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KYC_Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KYC_simulation": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If_statement_credit_score": {
+      "main": [
+        [
+          {
+            "node": "simulation_Credit_score",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Credit_Score_Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "simulation_Credit_score": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "AI Agent Planner": {
+      "main": [
+        [
+          {
+            "node": "If_statement_KYC",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If_statement_credit_score",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KYC_Fallback": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Credit_Score_Fallback": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent final decision",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "System Variable - Policies": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent final decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent final decision",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent final decision": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "097a7d3e-975a-4fad-af5f-8be40a1d2199",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ae34e04ee5680d7775b0f996df12e40541c751df82e446a1f20200aa14ed7e49"
+  },
+  "id": "A1ejSsy4xXRuPfzv",
+  "tags": []
+}

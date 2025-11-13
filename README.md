@@ -39,7 +39,7 @@ The automation outputs a JSON record containing:
 
 ---
 
-## 🗂 Workflow Files
+##  Workflow Files
 
 | File | Description |
 |------|-------------|
